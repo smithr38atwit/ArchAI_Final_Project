@@ -3,3 +3,4 @@ Models
 Pipfile.lock
 cubicasa5k
 .vscode
+.venv
