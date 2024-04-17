@@ -24,10 +24,10 @@ n_clusters = 30  # Number of clusters for K-Means
 
 images = []
 
-if plan_path == "cubicasa5k":
+if not load_features and plan_path == "cubicasa5k":
     with open(os.path.join(plan_path, "all.txt")) as file:
         images = [f"{plan_path}{line.rstrip()}model.svg" for line in file]
-else:
+elif not load_features:
     # creates a ScandirIterator aliased as files
     with os.scandir(plan_path) as files:
         # loops through each file in the directory
