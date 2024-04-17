@@ -17,6 +17,7 @@ from sklearn.decomposition import PCA
 plan_path = "cubicasa5k"  # Floor plans path
 fig_path = "Figures"  # Saved figures path
 model_path = "Models"  # Saved models path
+save_models = False  # Whether to save machine learning models
 load_features = True  # Whether to load image features or extract them
 n_components = 100  # Number of components for PCA
 n_clusters = 30  # Number of clusters for K-Means
@@ -40,9 +41,11 @@ if not os.path.exists(f"{model_path}"):
     os.makedirs(f"{model_path}")
 
 model = VGG16()
-model.save(f"{model_path}/vgg16.keras")
+if save_models:
+    model.save(f"{model_path}/vgg16.keras")
 model = Model(inputs=model.inputs, outputs=model.layers[-2].output)
-model.save(f"{model_path}/vgg16_trunc.keras")
+if save_models:
+    model.save(f"{model_path}/vgg16_trunc.keras")
 
 
 def svgRead(filename):
@@ -103,13 +106,15 @@ print("Performing PCA...")
 pca = PCA(n_components=n_components, random_state=42)
 pca.fit(features)
 x = pca.transform(features)
-dump(pca, f"{model_path}/pca.joblib")
+if save_models:
+    dump(pca, f"{model_path}/pca.joblib")
 
 # Cluster feature vectors
 print("Performing K-Means Clustering...")
 kmeans = KMeans(n_clusters=n_clusters, random_state=42)
 kmeans.fit(x)
-dump(kmeans, f"{model_path}/kmeans.joblib")
+if save_models:
+    dump(kmeans, f"{model_path}/kmeans.joblib")
 
 
 print("Visualizing clusters...")
