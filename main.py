@@ -1,4 +1,5 @@
 import io
+import json
 import os
 import pickle
 
@@ -16,9 +17,9 @@ from sklearn.decomposition import PCA
 plan_path = "cubicasa5k"  # Floor plans path
 fig_path = "Figures"  # Saved figures path
 model_path = "Models"  # Saved models path
-load_features = False  # Whether to load image features or extract them
+load_features = True  # Whether to load image features or extract them
 n_components = 100  # Number of components for PCA
-n_clusters = 6  # Number of clusters for K-Means
+n_clusters = 30  # Number of clusters for K-Means
 
 images = []
 
@@ -113,29 +114,45 @@ dump(kmeans, f"{model_path}/kmeans.joblib")
 
 print("Visualizing clusters...")
 
-# holds the cluster id and the images { id: [images] }
+# Create directories
+if not os.path.exists(f"{fig_path}"):
+    os.makedirs(f"{fig_path}")
+identifier = f"{n_components}co_{n_clusters}cl"
+if not os.path.exists(f"{fig_path}/{identifier}"):
+    os.makedirs(f"{fig_path}/{identifier}")
+
+# holds the cluster id and the images { id: {num_files: n, files: [images]} }
 groups = {}
 for file, cluster in zip(filenames, kmeans.labels_):
+    cluster = int(cluster)
     if cluster not in groups.keys():
-        groups[cluster] = []
-    groups[cluster].append(file)
+        groups[cluster] = {"num_files": 0, "files": []}
+    groups[cluster]["num_files"] += 1
+    groups[cluster]["files"].append(file)
+
+json_path = f"{fig_path}/{identifier}.json"
+if os.path.exists(json_path):
+    os.remove(json_path)
+with open(json_path, "w") as f:
+    json.dump(groups, f, sort_keys=True, indent=4)
 
 
 # function that lets you view a cluster (based on identifier)
 def view_cluster(cluster):
     plt.figure(figsize=(25, 25))
     # gets the list of filenames for a cluster
-    files = groups[cluster]
+    files = groups[cluster]["files"]
 
     if not os.path.exists(f"{fig_path}"):
         os.makedirs(f"{fig_path}")
-    # only allow up to 30 images to be shown at a time
-    if len(files) > 3:
-        print(f"Clipping cluster size from {len(files)} to 3")
-        files = files[:3]
+    # only allow up to n_files images to be shown at a time
+    n_files = 9
+    if len(files) > n_files:
+        print(f"Clipping cluster size from {len(files)} to {n_files}")
+        files = files[:n_files]
     # plot each image in the cluster
     for index, file in enumerate(files):
-        plt.subplot(1, 3, index + 1)
+        plt.subplot(3, 3, index + 1)
         if plan_path == "cubicasa5k":
             img = svgRead(file)
         else:
@@ -143,25 +160,9 @@ def view_cluster(cluster):
             img = np.array(img)
         plt.imshow(img)
         plt.axis("off")
-    plt.savefig(f"{fig_path}/Cluster{cluster}_small")
+    plt.savefig(f"{fig_path}/{identifier}/Cluster{cluster}_small")
+    plt.close()
 
 
 for key in groups.keys():
     view_cluster(key)
-
-
-# determine value for k
-# sse = []
-# list_k = list(range(3, 50))
-
-# for k in list_k:
-#     km = KMeans(n_clusters=k, random_state=22)
-#     km.fit(x)
-
-#     sse.append(km.inertia_)
-
-# # Plot sse against k
-# plt.figure(figsize=(6, 6))
-# plt.plot(list_k, sse)
-# plt.xlabel(r"Number of clusters *k*")
-# plt.ylabel("Sum of squared distance")
