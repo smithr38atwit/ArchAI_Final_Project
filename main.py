@@ -1,5 +1,6 @@
 import io
 import os
+import pickle
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,13 +13,13 @@ from PIL import Image
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 
-# directory where the images are located
-plan_path = "cubicasa5k"
-# directory to save figures
-fig_path = "Figures"
-# directory to download save models
-model_path = "Models"
-# this list holds all the image filenames
+plan_path = "cubicasa5k"  # Floor plans path
+fig_path = "Figures"  # Saved figures path
+model_path = "Models"  # Saved models path
+load_features = False  # Whether to load image features or extract them
+n_components = 100  # Number of components for PCA
+n_clusters = 6  # Number of clusters for K-Means
+
 images = []
 
 if plan_path == "cubicasa5k":
@@ -75,29 +76,37 @@ def extract_features(file, model):
     return features
 
 
-# Extract features from each image
-print("Extracting features...")
 data = {}
-for i, image in enumerate(images):
-    print(f"{i+1} / {len(images)}")
-    features = extract_features(image, model)
-    if features is None:
-        continue
-    data[image] = features
+if load_features:
+    with open(f"{model_path}/extracted_features.pickle", "rb") as f:
+        data = pickle.load(f)
+else:
+    # Extract features from each image
+    log_interval = int(len(images) * 0.1)
+    for i, image in enumerate(images):
+        if i + 1 % log_interval == 0:
+            print(f"{i+1} / {len(images)}")
+        features = extract_features(image, model)
+        if features is None:
+            continue
+        data[image] = features
+
+    with open(f"{model_path}/extracted_features.pickle", "wb") as f:
+        pickle.dump(data, f)
 
 filenames = np.array(list(data.keys()))
 features = np.array(list(data.values())).reshape(-1, 4096)
 
 # Reduce the amount of dimensions in the feature vector
 print("Performing PCA...")
-pca = PCA(n_components=100, random_state=22)
+pca = PCA(n_components=n_components, random_state=42)
 pca.fit(features)
 x = pca.transform(features)
 dump(pca, f"{model_path}/pca.joblib")
 
 # Cluster feature vectors
 print("Performing K-Means Clustering...")
-kmeans = KMeans(n_clusters=3, random_state=22)
+kmeans = KMeans(n_clusters=n_clusters, random_state=42)
 kmeans.fit(x)
 dump(kmeans, f"{model_path}/kmeans.joblib")
 
